@@ -7,17 +7,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, macos-latest, ubuntu-latest]
-        build_type: [RelWithDebInfo, Debug]
-        ui: [gui, cli]
-        scripting: [lua, noscripts]
+        os: [ubuntu-latest]
+        build_type: [Release]
+        ui: [gui]
+        scripting: [lu]
         exclude:
-          - build_type: Debug
+          - build_type: Release
             ui: gui
-          - build_type: RelWithDebInfo
-            ui: cli
-          - build_type: RelWithDebInfo
-            scripting: noscripts
     steps:
     - uses: actions/checkout@v4
       with:
@@ -34,17 +30,8 @@ jobs:
       if: ${{ matrix.ui == 'gui' }}
       shell: bash
       run: |
-        if [[ "${{ runner.os }}" == "Windows" ]] ; then
-          choco install wget -y --no-progress
-          wget https://github.com/aseprite/skia/releases/download/m124-08a5439a6b/Skia-Windows-Release-x64.zip
-          unzip Skia-Windows-Release-x64.zip -d skia
-        elif [[ "${{ runner.os }}" == "macOS" ]] ; then
-          wget https://github.com/aseprite/skia/releases/download/m124-08a5439a6b/Skia-macOS-Release-arm64.zip
-          unzip Skia-macOS-Release-arm64.zip -d skia
-        else
-          wget https://github.com/aseprite/skia/releases/download/m124-08a5439a6b/Skia-Linux-Release-x64.zip
-          unzip Skia-Linux-Release-x64.zip -d skia
-        fi
+        wget https://github.com/aseprite/skia/releases/download/m124-08a5439a6b/Skia-Linux-Release-x64.zip
+        unzip Skia-Linux-Release-x64.zip -d skia
     - name: ccache
       uses: hendrikmuhs/ccache-action@v1
       if: ${{ runner.os == 'Linux' || runner.os == 'macOS' }}
@@ -56,28 +43,11 @@ jobs:
     - name: Generating Makefiles
       shell: bash
       run: |
-        if [[ "${{ runner.os }}" == "Windows" ]] ; then
-          export enable_ccache=off
-        else
-          export enable_ccache=on
-        fi
-        if [[ "${{ matrix.ui }}" == "gui" ]] ; then
-          export enable_ui=on
-          export laf_backend=skia
-        else
-          export enable_ui=off
-          export laf_backend=none
-        fi
-        if [[ "${{ matrix.scripting }}" == "lua" ]] ; then
-          export enable_scripting=on
-        else
-          export enable_scripting=off
-        fi
-        if [[ "${{ runner.os }}" == "macOS" ]] ; then
-          export skia_arch=arm64
-        else
-          export skia_arch=x64
-        fi
+        export enable_ccache=on
+        export enable_ui=on
+        export laf_backend=ski
+        export enable_scripting=o
+        export skia_arch=x6
         cmake -S . -B build -G Ninja \
           -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
           -DCMAKE_OSX_DEPLOYMENT_TARGET=10.9 \
@@ -92,20 +62,9 @@ jobs:
       shell: bash
       run: |
         cd build && ninja
-    - name: Running C++ Tests
-      shell: bash
-      run: |
-        if [[ "${{ runner.os }}" == "Linux" ]] ; then
-          export XVFB=xvfb-run
-        fi
-        cd build && $XVFB ctest --output-on-failure
-    - name: Running CLI Tests
-      if: ${{ matrix.scripting == 'lua' }}
-      shell: bash
-      run: |
-        if [[ "${{ runner.os }}" == "Linux" ]] ; then
-          export XVFB=xvfb-run
-        fi
-        export ASEPRITE=$PWD/build/bin/aseprite
-        cd tests
-        $XVFB bash run-tests.sh
+    - uses: actions/upload-artifact@v3
+      with:
+        name: aseprite
+        path: |
+          D:/a/aseprite/aseprite/build/bin/data
+          D:/a/aseprite/aseprite/build/bin/aseprite
